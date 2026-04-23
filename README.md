@@ -96,7 +96,7 @@ s.predictor.appendHistory(...)
 pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
 ```
 
-*See docs/ for detailed explanation of how to run script 
+*See `docs/` for detailed explanation of how to run script 
 ```bash
 python offline_sarima.py
 ```
