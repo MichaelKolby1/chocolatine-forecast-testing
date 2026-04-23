@@ -108,6 +108,8 @@ The offline framework expects the following files in the repository:
 pip install pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
 ```
 
+---
+
 ## Model Experiments
 
 ### Forecast Horizon Experiment
