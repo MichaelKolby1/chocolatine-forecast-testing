@@ -91,18 +91,22 @@ s.predictor.appendHistory(...)
 - 12 forecast steps = 6-hour block
 - Weekly seasonality via `s.ppw`
 
-## Dependencies & Example Run
+---
+## Setup & Running Offline Tests
 
-*Make sure to install the modules below before running offline tests
+### Required Files
+
+The offline framework expects the following files in the repository:
+
+- `offline_sarima.py`
+- `arma_model_dump_gtr.xlsx`
+- Chocolatine source files in `/source`
+
+### Python Dependencies
+
 ```bash
-pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
+pip install pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
 ```
-
-*See `docs/` for detailed explanation of how to run script 
-```bash
-python offline_sarima.py
-```
-
 
 ## Model Experiments
 
