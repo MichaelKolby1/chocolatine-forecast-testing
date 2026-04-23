@@ -35,7 +35,9 @@ Reconstruct the behavior of a `ChocGtrTimeSeries` object offline and review how 
 ---
 
 ## Repository Structure
-- `offline_sarima.py`: main offline testing framework  
+- `offline_sarima.py`: main offline testing framework
+
+- `arma_model_dump_gtr.xlsx`: exported IODA parameters used for forecasting
 
 - `annotated_source/` – Commented and explained versions of core Chocolatine source files
 
