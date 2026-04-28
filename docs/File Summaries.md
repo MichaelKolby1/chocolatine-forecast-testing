@@ -1,127 +1,154 @@
-##### *File Summaries*
+# File Summaries
+This document summarizes the Chocolatine source files used to understand offline SARIMA prediction, model training, and anomaly detection.
 
+---
 
+## Core Prediction Files
 
-###### **libchocolatine.py**
+### `libchocolatine.py`
 
-* Main detector of outages
-* Owns 'ChocolatineDetector' object (also per-series objects)
-* Methods:
+- Main orchestration layer for Chocolatine.
+- Defines time series classes for different IODA signal types.
+- Connects historical data fetching, model loading, forecasting, and anomaly detection into one pipeline.
 
- 	- Series object when a new live stream appears
+#### Responsibilities
 
- 	- Searches for an existing model in the database
+- Creates per-series objects when a new live stream appears.
+- Searches for an existing saved model in the database.
+- Requests a new model through Kafka if needed.
+- Requests historical data to begin predictions.
+- Processes historical data.
+- Reviews each live point to determine whether to generate an alert.
 
- 	- Requests a new model through Kafka if needed
+---
 
- 	- Requests historical data to begin predictions
+### `asyncfetcher.py`
 
- 	- Processes historical data
+- Handles retrieval of historical IODA data from the API.
+- Builds API requests depending on the signal type.
+- Supplies history used for model initialization and training.
 
- 	- Reviews each live point to decide whether to generate an alert
+#### Responsibilities
 
+- Parses different time series types (BGP, IBR, Active Probing, GTR).
+- Builds API query paths.
+- Fetches historical data.
+- Pushes results through queues for the Chocolatine detector.
 
+---
 
-###### **asynfecther.py**
+### `arimapredictor.py`
 
-* Turns Chocolatine series key into an IODA API request
-* Methods:
+- Used after a model has already been trained.
+- Performs online forecasting using the trained ARIMA model.
 
- 	- Parses different time series (BGP, IBR, Active Probing, gtr)
+#### Responsibilities
 
- 	- Builds API query path
+- Maintains recent signal history.
+- Fills missing values using seasonal medians.
+- Applies seasonal differencing.
+- Generates short-term forecasts.
+- Updates history when outages occur so the baseline does not shift too aggressively.
 
- 	- Fetches history
+---
 
- 	- Pushes results through queues for the Chocolatine detector
+## Model Training Files
 
+### `modeller.py`
 
+- Manages offline generation of forecasting models used by Chocolatine.
+- Receives model requests, gets historical IODA data, and determines whether enough data exists to train a model.
+- If sufficient data exists, it submits ARIMA training jobs.
+- Once complete, it returns ARMA parameters and MAD values used for anomaly detection.
 
-###### **arimapredictor.py**
+#### Responsibilities
 
-* File implemented after model identified
-* Methods:
+- Runs a separate service to build or refresh models.
+- Listens on Kafka for model requests.
+- Fetches sufficient historical data for modelling.
+- Determines whether a time series is appropriate for modelling.
+- Chooses a `ZERO` model for mostly-zero data.
+- Submits jobs to the ARIMA worker pool.
+- Publishes generated models to Kafka.
 
- 	- Review recent history
+---
 
- 	- Smooth missing values using seasonal medians
+### `arimabuilder.py`
 
- 	- Maintain differenced history (seasonal differencing to eliminate weekly seasonality)
+- Manages parallel training of ARIMA models.
 
- 	- Generates short-term forecasts (forecast method in file)
+#### Responsibilities
 
- 	- Updates history when outages/anomalies occur to avoid shifting the baseline of model too aggressively
+- Creates worker processes.
+- Sends training jobs to workers.
+- Each worker trains a model using `arima.pyx`.
+- Returns results to the main process.
+- Worker pool can run many jobs simultaneously.
 
+---
 
+### `arima.pyx`
 
-###### **arimabuilder.py**
+- Main ARIMA statistical engine used by Chocolatine.
 
-* Methods:
+#### Responsibilities
 
- 	- Creates multiprocessing worker process
+- Performs seasonal differencing.
+- Selects fitted ARMA parameters.
+- Computes error statistics and MAD intervals.
 
- 	- Sends jobs to workers for model construction ('ChocArimaJob' object estimates model for specific time series,'ChocArimaTrainer' object is background process running one jobs)
+---
 
- 	- Worker pool ('ChocArimaPool') manages collections of workers to run multiple jobs at once
+# File Interactions
 
- 	- Calls code from arima.pyx to fit a model
+---
 
- 	- Returns model parameters and interval data for modeler
+## Main Relationships
 
+1. **libchocolatine.py ↔ asyncfetcher.py**  
+   Uses asyncfetcher to collect historical IODA data required before forecasting.
 
+2. **libchocolatine.py ↔ modeller.py**  
+   Requests new models when saved models are missing or stale.
 
-###### **modeller.py**
+3. **modeller.py ↔ asyncfetcher.py**  
+   Uses historical data to determine whether and how to train models.
 
-* Runs a separate service to build or refresh models when requested
-* Methods:
+4. **modeller.py ↔ arimabuilder.py**  
+   Sends model-building jobs to worker processes.
 
- 	- Listens on Kafka for model requests
+5. **arimabuilder.py ↔ arima.pyx**  
+   Workers call ARIMA engine to fit models and compute MAD intervals.
 
- 	- Fetches sufficient historical data for modelling
+6. **libchocolatine.py ↔ arimapredictor.py**  
+   Uses trained models to generate live forecasts and thresholds.
 
- 	- Checks where time series is appropriate for modelling
+---
 
- 	- Decides whether to use a 'ZERO' model for mostly-zero data
+# Full System Sequence
 
- 	- Submits model-building job to ARIMA pool
+---
 
- 	- Publishes generated model to Kafka
+1. `libchocolatine.py` creates a new series object and checks PostgreSQL for an existing model.
 
+2. If missing or stale, it sends a Kafka request for a new model.
 
+3. It requests historical signal data through `asyncfetcher.py`.
 
-###### **arima.pyx**
+4. `asyncfetcher.py` queries the IODA API and returns the data.
 
-* Responsible for statistical ARIMA/ARMA analysis
-* Math engine that performs expensive model analysis used by the worker pool
+5. `libchocolatine.py` processes the history and initializes an `ArimaPredictor`.
 
+6. `modeller.py` receives the Kafka request and fetches sufficient training data.
 
+7. If suitable, `modeller.py` creates a job for `arimabuilder.py`.
 
+8. Worker processes in `arimabuilder.py` call `arima.pyx` to fit a model.
 
+9. Trained ARMA parameters and MAD intervals are returned to `modeller.py`.
 
-##### *File Interactions \& Sequence*
+10. `modeller.py` publishes the finished model through Kafka.
 
+11. `libchocolatine.py` receives the updated model and rebuilds forecasting objects.
 
-
-**Interactions:**
-
-1. **libchocolatine.py <--> asynfecther.py**: when libchocolatine.py takes in a live time series, it leverages classes/methods from asyncfetcher.py (AsyncHistoryFetcher, runAsyncFetcher()) to collect the appropriate data from the IODA API to begin prediction in libchocolatine.py
-2. **libchocolatine.py <--> modeller.p**y: when a new series is created, libchocolatine.py checks the database for an existing saved model or sends a Kafka model request. modeller.py performs the Kafka requests, fetches model history, and decides whether the series should use a 'ZERO' model or a fitted ARMA model.
-3. **modeller.py <--> asyncfetcher.py**: asyncfetcher.py provides the raw historical signal data (fetchIodaMeta(),fetchhIodaHistoricBlocking()) for modeller.py to decide whether and how to fit data to a model
-4. **modeller.py <--> arimabuilder.py**: modeller.py identifies suitable time series for modelling and creates a ChocArimaJob object and submits it to the worker pool. arimabuilder.py accepts jobs and assigns them to workers based on the decisions of modeler.py
-5. **arimabuilder.py <--> arima.pyx**: for each worker, they computer weekly differencing order from step size, creates Arima object from arima.pyx calls prepare\_analysis() from arima.pyx, collects model and MAD-based intervals, and packages results for modeller.py
-6. **libchocolatine.py <--> arimapredictor.py**: when libchocolatine.py has history and a usable model, it creates an ArimaPredictor object from arimapredictor.py. Calls bootstrapHistory() from arimapredictor.py to compare observed value to predicted and threshold.
-
-
-
-**Sequence:**
-
-1. In libchocolatine.py, createNewSeries() creates the correct per-series object (ChocBgpTimeSeries, ChocGtrTimeSeries, ChocTelescopeTimeSeries, or ChocActiveTimeSeries) and then calls lookupModelInDatabase() from libchocolatine.py to see whether a fresh saved model already exists in PostgreSQL. If the model is missing or stale, createNewSeries() sends a Kafka model request using \_sendModelRequest(), also from libchocolatine.py. If no database model exists, it temporarily assigns a default model.
-2. Still in libchocolatine.py, processLiveData() calls sendHistoryRequest() from libchocolatine.py, which creates a history job tuple (serieskey, timestamp, 10 weeks, s.datafreq) and pushes it onto the detector’s histRequest queue.
-3. In libchocolatine.py, runTestInstance(detector, kafkaconf) function starts an AsyncHistoryFetcher object imported from asyncfetcher.py. It passes detector.histRequest and detector.histReply into that fetcher, so the fetcher can read requested history jobs and return completed history results.
-4. In asyncfetcher.py, the AsyncHistoryFetcher object reads jobs from the queue and its async fetch() function calls formHistoryQuery() from asyncfetcher.py to translate the series key into the proper IODA API URL. fetch() then performs the HTTP request to the IODA API and pushes the returned history onto the detector’s histReply queue.
-5. Back in libchocolatine.py, the detector’s run() method reads from histReply. When history arrives, run() calls processHistoryData() from libchocolatine.py. That method stores the history, computes time-slot medians, and then creates an ArimaPredictor object from arimapredictor.py. It calls ArimaPredictor.bootstrapHistory() and then ArimaPredictor.forecast(12) to initialize live forecasting.
-6. If a better model is needed, modeller.py receives the Kafka model request. Its ChocModeller class uses \_fetchData() and deriveBestModel() from modeller.py. That file imports fetchIodaMeta and fetchIodaHistoricBlocking from asyncfetcher.py, so it reuses the same IODA query logic, but through the blocking fetch path rather than the detector’s async queue path. deriveBestModel() either decides the series should use a "ZERO" model or creates a ChocArimaJob object imported from arimabuilder.py.
-7. In arimabuilder.py, the ChocArimaPool object receives that ChocArimaJob. One of its workers runs runArimaTrainer() from arimabuilder.py, which creates an arima.Arima() object from arima.pyx and calls prepare\_analysis(). That returns the fitted ARMA model and the MAD-based interval widths.
-8. Back in modeller.py, the run() method collects completed worker results from the ChocArimaPool, builds a reply message, and publishes that model over Kafka using the producer configured in setupKafkaProducer(). If database storage is enabled, insertDatabaseRow() from modeller.py also writes the fitted model into PostgreSQL.
-9. Back in libchocolatine.py, the detector’s run() method polls Kafka for model replies. When it receives one, it calls updateSeriesWithNewModel() from libchocolatine.py. That method updates the series’ AR/MA parameters and interval widths, then rebuilds the ArimaPredictor from arimapredictor.py by calling bootstrapHistory() and forecast(12) again if history is already available.
-10. libchocolatine.py continues running processLiveData(), which compares each observed value against the prediction threshold and updates the predictor state. The predictor update itself is done through ArimaPredictor.appendHistory() from arimapredictor.py, while the decision logic remains in libchocolatine.py.
+12. Live observations continue to be tested against thresholds for anomaly detection.
