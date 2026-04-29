@@ -534,7 +534,7 @@ if DEBUG_ERROR_METRICS:
 #   - Compute metrics such as mean absolute error, mean 
 #   relative error, etc. for offline vs. API predictions/thresholds
 #
-# INSTRUCTIONS
+# INSTRUCTIONS:
 #   - Starting times for predictions must begin at 00:30, 06:30, 
 #   12:30, 18:30 UTC
 #   - Select any valid args.time but keep args.duration at 
