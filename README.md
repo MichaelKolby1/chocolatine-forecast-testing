@@ -45,6 +45,10 @@ Reconstruct the behavior of a `ChocGtrTimeSeries` object offline and review how 
 
 - `docs/` – Chocolatine source code notes and experiment summaries
 
+- `sample_outputs/` - example Excel exports and sample files generated during testing
+
+- `test_results/` - consolidated outputs and summarized results from completed experiments
+
 
 ## Reconstructed Chocolatine Workflow
 
