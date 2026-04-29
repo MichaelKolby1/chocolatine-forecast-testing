@@ -39,9 +39,11 @@ Reconstruct the behavior of a `ChocGtrTimeSeries` object offline and review how 
 
 - `arma_model_dump_gtr.xlsx`: exported IODA parameters used for forecasting
 
-- `annotated_source/` – Commented and explained versions of core Chocolatine source files
+- `annotated_source/` – commented and explained versions of core Chocolatine source files
 
-- `docs/` – Research notes, experiment summaries, model failure analysis, and forecasting lifecycle observations.
+- `source/` - original Chocolatine source files
+
+- `docs/` – research notes, experiment summaries, model failure analysis, and forecasting lifecycle observations.
 
 
 ## Reconstructed Chocolatine Workflow
