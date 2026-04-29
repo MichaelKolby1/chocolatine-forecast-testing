@@ -43,7 +43,7 @@ Reconstruct the behavior of a `ChocGtrTimeSeries` object offline and review how 
 
 - `source/` - original Chocolatine source files
 
-- `docs/` – research notes, experiment summaries, model failure analysis, and forecasting lifecycle observations.
+- `docs/` – Chocolatine source code notes and experiment summaries
 
 
 ## Reconstructed Chocolatine Workflow
