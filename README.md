@@ -1,6 +1,6 @@
 # Chocolatine Offline Testing
 
-**Authors**: Georgia Tech VIP for Internet Outage Detection & Analysis (IODA)
+**Authors**: Georgia Tech VIP for Internet Outage Detection & Analysis (IODA), Michael Kolby
 
 Offline SARIMA experimentation framework for reproducing, evaluating, and supporting implementation of the Chocolatine forecasting pipeline for IODA anomaly detection.
 
