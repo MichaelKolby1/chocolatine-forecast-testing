@@ -37,6 +37,8 @@ Reconstruct the behavior of a `ChocGtrTimeSeries` object offline and review how 
 ## Repository Structure
 - `offline_sarima.py`: main offline testing framework
 
+- `requirements.txt`: required Python packages
+
 - `arma_model_dump_gtr.xlsx`: exported IODA parameters used for forecasting
 
 - `annotated_source/` – commented and explained versions of core Chocolatine source files
@@ -110,10 +112,10 @@ The offline framework expects the following files in the repository:
 
 ### Python Dependencies
 
-Install locally or collect packages from `requirements.txt` when cloning repository.
+Install the required Python packages from `requirements.txt`:
 
 ```bash
-pip install pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
+pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
 ```
 
 ---
