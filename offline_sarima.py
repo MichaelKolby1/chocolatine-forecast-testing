@@ -52,7 +52,7 @@ validation, experimentation, and outage detection analysis.
 # are located in the same working directory:
 #
 # Required model parameter file:
-#   - arma_model_dump_gtr.csv
+#   - arma_model_dump_gtr.xlsx
 #
 # Required Chocolatine source files:
 #   - libchocolatine.py
