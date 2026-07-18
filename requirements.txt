@@ -1,0 +1,9 @@
+pandas 
+numpy 
+regex 
+requests 
+openpyxl 
+scipy 
+statsmodels 
+confluent_kafka
+pycountry
