@@ -110,6 +110,8 @@ The offline framework expects the following files in the repository:
 
 ### Python Dependencies
 
+Install locally or collect packages from `requirements.txt` when cloning repository.
+
 ```bash
 pip install pandas numpy regex requests openpyxl scipy statsmodels confluent_kafka pycountry
 ```
